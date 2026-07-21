@@ -205,7 +205,7 @@ jobs:
           git config --global user.name "Numbersf"
           git config --global user.email "263623064@qq.com"
           mkdir kernel_workspace && cd kernel_workspace
-          git clone https://github.com/Numbersf/Action-Build.git -b ReSukiSU
+          git clone https://github.com/${GITHUB_REPOSITORY}.git -b ReSukiSU
 
       - name: Extract Manifest Info
         id: extract_info
@@ -486,6 +486,25 @@ jobs:
             sed -i 's/check_defconfig = None,/check_defconfig = "disabled",/' kernel_platform/build/kernel/kleaf/common_kernels.bzl
             sed -i 's/if check_defconfig == None:/if False:  # check_defconfig == None:/' kernel_platform/build/kernel/kleaf/common_kernels.bzl
           fi
+
+      - name: Patch - Nullify ARB update
+        run: |
+          set -e
+          PATCH_FILE="$GITHUB_WORKSPACE/kernel_workspace/Action-Build/patches/zero_update_arb_store.patch"
+          TARGET_DIR="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/msm-kernel"
+
+          echo "::group::Applying nullification patch"
+          git -C "$TARGET_DIR" apply "$PATCH_FILE"
+          echo "Patch applied successfully."
+          echo "::endgroup::"
+
+          echo "::group::Verification - update_arb_store"
+          grep -n -A6 "update_arb_store" "$TARGET_DIR/drivers/power/reset/qcom-dload-mode.c"
+          echo "::endgroup::"
+
+          echo "::group::Verification - qcom_scm_update_rollback_version"
+          grep -n -A4 "qcom_scm_update_rollback_version" "$TARGET_DIR/drivers/firmware/qcom_scm.c"
+          echo "::endgroup::"
 
       - name: Kernel Version Handling
         run: |
